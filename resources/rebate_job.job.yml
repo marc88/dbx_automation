@@ -1,0 +1,44 @@
+resources:
+  jobs:
+    rebate_ai_extraction:
+      name: rebate_ai_extraction
+      trigger:
+        pause_status: UNPAUSED
+        file_arrival:
+          url: /Volumes/dbx_lab/rebate_demo/landing_demo_datalake/
+      max_concurrent_runs: 2
+      tasks:
+        - task_key: scan_claim_headers
+          job_cluster_key: scan_claim_headers_cluster
+          notebook_task:
+            notebook_path: /src/rebate_automation/scan_claim_headers
+        - task_key: scan_claim_line_items
+          depends_on:
+              - task_key: scan_claim_headers
+          job_cluster_key: scan_claim_headers_cluster
+          notebook_task:
+            notebook_path: /src/rebate_automation/scan_claim_line_items
+      job_clusters:
+        - job_cluster_key: scan_claim_headers_cluster
+          new_cluster:
+            spark_version: 18.x-scala2.13
+            azure_attributes:
+              availability: SPOT_WITH_FALLBACK_AZURE
+              spot_bid_max_price: 100
+            node_type_id: Standard_D4ds_v4
+            driver_node_type_id: Standard_D4s_v3
+            custom_tags:
+              cost_type: dbx-job-compute
+              project: rebate_management
+              cost_center: PI02054
+            policy_id: 000DA26ECEDAF9AC
+            data_security_mode: USER_ISOLATION
+            runtime_engine: STANDARD
+            kind: CLASSIC_PREVIEW
+            is_single_node: false
+            num_workers: 1
+      tags:
+        cost_center: PI02054
+        type: job
+      queue:
+        enabled: true
